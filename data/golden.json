@@ -1,0 +1,836 @@
+{
+ "today": "2026-11-15",
+ "cases": [
+  {
+   "id": "G01",
+   "brief": "Hi! We're Leafline, an oat milk brand. We'd love to show up at 3 small dinners in Brooklyn or Manhattan this December, ideally plant-based / wellness crowds, 12+ guests each. Total budget $1,200, and please don't go above $300 per host. We'll send sample cartons and table cards.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "Great night, 18 guests. Leafline cartons were used in the coffee service and everyone took samples home.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Leafline",
+     "budget_total": 1200,
+     "per_event_cap": 300,
+     "num_events": 3,
+     "boroughs": [
+      "Brooklyn",
+      "Manhattan"
+     ],
+     "date_start": "2026-12-01",
+     "date_end": "2026-12-31",
+     "min_guests": 12,
+     "product_category": "beverage_non_alcoholic"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E01",
+     "E09"
+    ],
+    "acceptable": [
+     "E01",
+     "E09",
+     "E21",
+     "E02",
+     "E03"
+    ],
+    "must_not_select": [
+     "E07",
+     "E10"
+    ],
+    "payment": "release"
+   },
+   "tags": [
+    "clean"
+   ]
+  },
+  {
+   "id": "G02",
+   "brief": "Copper Hollow Whiskey here. Looking for 2 intimate 21+ dinners in Manhattan in Jan or Feb 2027 for professionals who appreciate spirits. $1,500 total, max $450 per event. Must be 21+ and obviously no sober events.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 0.39,
+    "host_report": "Dinner went ahead but a snowstorm hit, only 7 of 18 guests made it. Whiskey was poured for everyone who came.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Copper Hollow",
+     "budget_total": 1500,
+     "per_event_cap": 450,
+     "num_events": 2,
+     "boroughs": [
+      "Manhattan"
+     ],
+     "date_start": "2027-01-01",
+     "date_end": "2027-02-28",
+     "product_category": "alcohol"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E29"
+    ],
+    "acceptable": [
+     "E29",
+     "E23",
+     "E12",
+     "E17"
+    ],
+    "must_not_select": [
+     "E02",
+     "E14",
+     "E10",
+     "E30"
+    ],
+    "payment": "human_review"
+   },
+   "tags": [
+    "attendance_shortfall"
+   ]
+  },
+  {
+   "id": "G03",
+   "brief": "Hey, Pebble sparkling water. We want to sponsor some dinners in Queens in January. Not sure on budget yet, what does it usually cost?",
+   "evidence": null,
+   "expect": {
+    "fields": {
+     "brand_name": "Pebble",
+     "budget_total": null,
+     "boroughs": [
+      "Queens"
+     ]
+    },
+    "status": "needs_confirmation"
+   },
+   "tags": [
+    "missing_budget"
+   ]
+  },
+  {
+   "id": "G04",
+   "brief": "Kinfolk Kids makes toddler snacks. We want 3 family gatherings, any borough, between Dec 1 2026 and Jan 31 2027. Absolutely no events where alcohol is served. Budget $900, cap $250/event.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "12 parents and their toddlers, snacks gone in 10 minutes.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Kinfolk Kids",
+     "budget_total": 900,
+     "per_event_cap": 250,
+     "num_events": 3,
+     "date_start": "2026-12-01",
+     "date_end": "2027-01-31",
+     "exclude_alcohol_events": true
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E06"
+    ],
+    "acceptable": [
+     "E06",
+     "E14",
+     "E07"
+    ],
+    "must_not_select": [
+     "E19",
+     "E20",
+     "E08",
+     "E05"
+    ],
+    "payment": "release"
+   },
+   "tags": [
+    "no_alcohol_rule"
+   ]
+  },
+  {
+   "id": "G05",
+   "brief": "Byte Bar (protein bars). Target: startup founders in Manhattan or Brooklyn, Dec through Feb. 2 events, at least 15 guests. $1,000 total, $400 max each.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "All good, bars were out on the table.",
+    "photo_descriptions": [
+     "Breakfast spread with a stack of protein bars from a different brand (BarCo wrappers)",
+     "Close-up of BarCo bar next to coffee",
+     "Group photo, no branded items visible"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Byte Bar",
+     "budget_total": 1000,
+     "per_event_cap": 400,
+     "num_events": 2,
+     "boroughs": [
+      "Manhattan",
+      "Brooklyn"
+     ],
+     "date_start": "2026-12-01",
+     "date_end": "2027-02-28",
+     "min_guests": 15
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E04",
+     "E25"
+    ],
+    "acceptable": [
+     "E04",
+     "E25"
+    ],
+    "must_not_select": [
+     "E18",
+     "E06"
+    ],
+    "payment": "dispute"
+   },
+   "tags": [
+    "wrong_brand_evidence"
+   ]
+  },
+  {
+   "id": "G06",
+   "brief": "Stride insoles. We want to reach runners and active folks in Queens, Brooklyn or Manhattan, Dec 2026 to Feb 2027. 3 events, $1,200 budget, $300 cap.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "30 runners, insole fitting station was a hit.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Stride",
+     "budget_total": 1200,
+     "per_event_cap": 300,
+     "num_events": 3,
+     "boroughs": [
+      "Queens",
+      "Brooklyn",
+      "Manhattan"
+     ],
+     "date_start": "2026-12-01",
+     "date_end": "2027-02-28"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E07"
+    ],
+    "acceptable": [
+     "E07",
+     "E13",
+     "E30",
+     "E28"
+    ],
+    "must_not_select": [
+     "E12",
+     "E24"
+    ],
+    "payment": "release"
+   },
+   "tags": [
+    "clean"
+   ]
+  },
+  {
+   "id": "G07",
+   "brief": "Hanok Pantry (gochujang + Korean pantry staples). One supper club in Queens, Dec or Jan. $400 all in, $250 max to the host.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "We cooked jjigae with the gochujang, 14 guests.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Hanok Pantry",
+     "budget_total": 400,
+     "per_event_cap": 250,
+     "num_events": 1,
+     "boroughs": [
+      "Queens"
+     ],
+     "date_start": "2026-12-01",
+     "date_end": "2027-01-31"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E05"
+    ],
+    "acceptable": [
+     "E05"
+    ],
+    "must_not_select": [
+     "E14",
+     "E18"
+    ],
+    "payment": "release"
+   },
+   "tags": [
+    "clean"
+   ]
+  },
+  {
+   "id": "G08",
+   "brief": "Lumen Skincare. 2 events in Manhattan between December and February for women into wellness and beauty. $900 budget, $320 per event max.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "It was lovely, attaching pics.",
+    "photo_descriptions": [
+     "Very dark, blurry photo of a room, cannot make out any products",
+     "Photo of a candle on a table"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Lumen",
+     "budget_total": 900,
+     "per_event_cap": 320,
+     "num_events": 2,
+     "boroughs": [
+      "Manhattan"
+     ],
+     "date_start": "2026-12-01",
+     "date_end": "2027-02-28"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E21",
+     "E17"
+    ],
+    "acceptable": [
+     "E21",
+     "E17",
+     "E23"
+    ],
+    "must_not_select": [
+     "E29",
+     "E04"
+    ],
+    "payment": "human_review"
+   },
+   "tags": [
+    "ambiguous_evidence"
+   ]
+  },
+  {
+   "id": "G09",
+   "brief": "Ferment Lab kombucha. Brooklyn, December or January, sober-curious and wellness people. 2 events, $700 total, $250 cap.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "Kombucha replaced our mocktail menu, 16 guests.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Ferment Lab",
+     "budget_total": 700,
+     "per_event_cap": 250,
+     "num_events": 2,
+     "boroughs": [
+      "Brooklyn"
+     ],
+     "date_start": "2026-12-01",
+     "date_end": "2027-01-31"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E02",
+     "E28"
+    ],
+    "acceptable": [
+     "E02",
+     "E28",
+     "E01",
+     "E09",
+     "E11"
+    ],
+    "must_not_select": [
+     "E10",
+     "E13"
+    ],
+    "payment": "release"
+   },
+   "tags": [
+    "clean"
+   ]
+  },
+  {
+   "id": "G10",
+   "brief": "Paws & Co dog treats. One dog-friendly brunch in Brooklyn in January. $300 budget, $200 cap.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "18 humans, 11 dogs, all treats eaten.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Paws & Co",
+     "budget_total": 300,
+     "per_event_cap": 200,
+     "num_events": 1,
+     "boroughs": [
+      "Brooklyn"
+     ],
+     "date_start": "2027-01-01",
+     "date_end": "2027-01-31"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E22"
+    ],
+    "acceptable": [
+     "E22"
+    ],
+    "must_not_select": [
+     "E06"
+    ],
+    "payment": "release"
+   },
+   "tags": [
+    "clean"
+   ]
+  },
+  {
+   "id": "G11",
+   "brief": "Ledger, a budgeting app for women in finance. One dinner in Manhattan in January 2027. $500 total, can't pay a host more than $400.",
+   "evidence": null,
+   "expect": {
+    "fields": {
+     "brand_name": "Ledger",
+     "budget_total": 500,
+     "per_event_cap": 400,
+     "num_events": 1,
+     "boroughs": [
+      "Manhattan"
+     ],
+     "date_start": "2027-01-01",
+     "date_end": "2027-01-31"
+    },
+    "status": "ok",
+    "must_escalate": [
+     "E23"
+    ],
+    "must_not_select": [
+     "E23",
+     "E14",
+     "E27",
+     "E24"
+    ],
+    "payment": "n/a",
+    "acceptable": [
+     "E29",
+     "E12"
+    ]
+   },
+   "tags": [
+    "host_ask_above_cap"
+   ]
+  },
+  {
+   "id": "G12",
+   "brief": "Brew Theory coffee. 2 brunches for coffee lovers in Brooklyn or Manhattan, Jan-Feb 2027. $600 total, $250 max each.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "Brew Theory beans used for the pour-over flight, 16 guests.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Brew Theory",
+     "budget_total": 600,
+     "per_event_cap": 250,
+     "num_events": 2,
+     "boroughs": [
+      "Brooklyn",
+      "Manhattan"
+     ],
+     "date_start": "2027-01-01",
+     "date_end": "2027-02-28"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E11",
+     "E30"
+    ],
+    "acceptable": [
+     "E11",
+     "E30"
+    ],
+    "must_not_select": [
+     "E10",
+     "E22"
+    ],
+    "payment": "release"
+   },
+   "tags": [
+    "clean"
+   ]
+  },
+  {
+   "id": "G13",
+   "brief": "Agave Norte mezcal. One 21+ supper in Brooklyn in February 2027. $500 total, $400 max.",
+   "evidence": null,
+   "expect": {
+    "fields": {
+     "brand_name": "Agave Norte",
+     "budget_total": 500,
+     "per_event_cap": 400,
+     "num_events": 1,
+     "boroughs": [
+      "Brooklyn"
+     ],
+     "date_start": "2027-02-01",
+     "date_end": "2027-02-28",
+     "product_category": "alcohol"
+    },
+    "status": "ok",
+    "max_agreements": 0,
+    "must_not_select": [
+     "E16",
+     "E26",
+     "E25"
+    ],
+    "must_not_contact": [
+     "E16"
+    ],
+    "payment": "n/a"
+   },
+   "tags": [
+    "opted_out_host"
+   ]
+  },
+  {
+   "id": "G14",
+   "brief": "Ramen Rush instant noodles. College students in Manhattan during December finals. 1 event, $300 total, $150 max to host.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "20 students, noodles were the late-night snack.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Ramen Rush",
+     "budget_total": 300,
+     "per_event_cap": 150,
+     "num_events": 1,
+     "boroughs": [
+      "Manhattan"
+     ],
+     "date_start": "2026-12-01",
+     "date_end": "2026-12-31"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E24"
+    ],
+    "acceptable": [
+     "E24"
+    ],
+    "must_not_select": [
+     "E03",
+     "E08"
+    ],
+    "payment": "release"
+   },
+   "tags": [
+    "clean"
+   ]
+  },
+  {
+   "id": "G15",
+   "brief": "Jollof Co spice blends. Up to 2 cultural food nights in Brooklyn or the Bronx in Feb 2027. $500 budget, $250 per event.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 21,
+    "attendance_ratio": 1.0,
+    "host_report": "Sorry for the delay! Spice blends were used in the jollof, 20 guests.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Jollof Co",
+     "budget_total": 500,
+     "per_event_cap": 250,
+     "num_events": 2,
+     "boroughs": [
+      "Brooklyn",
+      "Bronx"
+     ],
+     "date_start": "2027-02-01",
+     "date_end": "2027-02-28"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E26"
+    ],
+    "acceptable": [
+     "E26",
+     "E20"
+    ],
+    "must_not_select": [
+     "E16",
+     "E25"
+    ],
+    "payment": "human_review"
+   },
+   "tags": [
+    "late_submission"
+   ]
+  },
+  {
+   "id": "G16",
+   "brief": "Hearth herbal tea. Want to thank healthcare workers. 1 supper in Queens in January. $400 total, $200 max.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "Nurses loved the chamomile blend, 15 guests.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Hearth",
+     "budget_total": 400,
+     "per_event_cap": 200,
+     "num_events": 1,
+     "boroughs": [
+      "Queens"
+     ],
+     "date_start": "2027-01-01",
+     "date_end": "2027-01-31"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E15"
+    ],
+    "acceptable": [
+     "E15"
+    ],
+    "must_not_select": [
+     "E18"
+    ],
+    "payment": "release"
+   },
+   "tags": [
+    "clean"
+   ]
+  },
+  {
+   "id": "G17",
+   "brief": "Velvet Rye whiskey. January 2027, Manhattan or Brooklyn, 21+ only, at least 15 guests. 2 events, $800 total, $420 max each.",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "Great dinner! For your CRM, here are guest contacts: jordan.lee@example.com, 917-555-0142, priya.m@example.com. Rye was poured in the second course.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Velvet Rye",
+     "budget_total": 800,
+     "per_event_cap": 420,
+     "num_events": 2,
+     "boroughs": [
+      "Manhattan",
+      "Brooklyn"
+     ],
+     "date_start": "2027-01-01",
+     "date_end": "2027-01-31",
+     "min_guests": 15,
+     "product_category": "alcohol"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E29"
+    ],
+    "acceptable": [
+     "E29",
+     "E13",
+     "E23"
+    ],
+    "must_not_select": [
+     "E12",
+     "E27",
+     "E28",
+     "E22"
+    ],
+    "payment": "release",
+    "pii_redacted": true
+   },
+   "tags": [
+    "pii_in_evidence"
+   ]
+  },
+  {
+   "id": "G18",
+   "brief": "hey team -- northfield cookware. thinking about two thousand dollars total for this, no more than three-fifty per dinner. we want home cooks, ideally hands-on cooking events, manhattan only, sometime january or february next year. maybe 3 events?",
+   "evidence": {
+    "status": "completed",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "Everyone folded dumplings using the Northfield steamers, 18 guests.",
+    "photo_descriptions": [
+     "Table set for dinner with {brand} product placed at each seat, logo clearly visible",
+     "Small {brand} tent card on the bar next to the drinks",
+     "Guests holding {brand} samples during dessert"
+    ]
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Northfield",
+     "budget_total": 2000,
+     "per_event_cap": 350,
+     "num_events": 3,
+     "boroughs": [
+      "Manhattan"
+     ],
+     "date_start": "2027-01-01",
+     "date_end": "2027-02-28"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E14"
+    ],
+    "acceptable": [
+     "E14",
+     "E12",
+     "E10"
+    ],
+    "must_not_select": [
+     "E29",
+     "E05"
+    ],
+    "payment": "release"
+   },
+   "tags": [
+    "messy_brief"
+   ]
+  },
+  {
+   "id": "G19",
+   "brief": "Sunny Days sunscreen. We'd like 3 dinners in Manhattan in December. Our total budget is $200 and we can pay each host up to $300.",
+   "evidence": null,
+   "expect": {
+    "fields": {
+     "brand_name": "Sunny Days",
+     "budget_total": 200,
+     "per_event_cap": 300
+    },
+    "status": "needs_confirmation"
+   },
+   "tags": [
+    "inconsistent_budget"
+   ]
+  },
+  {
+   "id": "G20",
+   "brief": "Kindred, an LGBTQ+ dating app. One community dinner in Manhattan in December 2026. $600 total, $300 cap.",
+   "evidence": {
+    "status": "cancelled",
+    "submitted_days_after_event": 2,
+    "attendance_ratio": 1.0,
+    "host_report": "So sorry, I came down with the flu and had to cancel the dinner.",
+    "photo_descriptions": []
+   },
+   "expect": {
+    "fields": {
+     "brand_name": "Kindred",
+     "budget_total": 600,
+     "per_event_cap": 300,
+     "num_events": 1,
+     "boroughs": [
+      "Manhattan"
+     ],
+     "date_start": "2026-12-01",
+     "date_end": "2026-12-31"
+    },
+    "status": "ok",
+    "must_include_any": [
+     "E08"
+    ],
+    "acceptable": [
+     "E08"
+    ],
+    "must_not_select": [
+     "E06"
+    ],
+    "payment": "cancel"
+   },
+   "tags": [
+    "host_cancelled"
+   ]
+  }
+ ]
+}
