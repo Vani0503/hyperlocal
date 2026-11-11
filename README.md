@@ -1,105 +1,75 @@
-# Hyperlocal — AI agent for small brand sponsorships
+# 🍽️ Hyperlocal
 
-An agent that takes a brand's free-text brief, finds fitting NYC dinner parties and supper clubs, prices and
-negotiates within the brand's limits, drafts host offers, plans shipping, then checks the host's evidence and
-decides whether to release payment. Rules handle money, eligibility, privacy and payment. AI is used only where
-judgment is needed.
+**An app that helps brands put their product into small dinner parties in New York.**
 
-## Web app (Streamlit)
+---
 
-```bash
-pip install -r requirements.txt
-streamlit run app.py            # opens http://localhost:8501
-```
-The app reads the API key from `.streamlit/secrets.toml` (copy `secrets.toml.example`), from the `ANTHROPIC_API_KEY` env var,
-or from the sidebar. With no key it runs in demo mode using an offline stand-in for the AI. Public visitors are capped at 15
-paid runs per session (`MAX_RUNS_PER_SESSION` in `app.py`).
+## The problem
 
-## Run it from the command line
+- **Brands** (for example, an oat milk company) want real people to try their product.
+- **Dinner party hosts** cook for 10–30 guests. They work hard and usually earn nothing.
+- A brand could pay a host to serve its product at a dinner. But setting up **one** small deal by hand takes 3–4 hours:
+  find the host, agree a price, send samples, check it happened, pay the host.
+- That's too much work for a $300 deal, so it doesn't happen.
 
-```bash
-pip install -r requirements.txt
-export ANTHROPIC_API_KEY=...        # agent (Haiku 5.5 + Sonnet 5.5)
-export OPENAI_API_KEY=...           # cross-model judge (different model family)
+## The idea
 
-python run.py --case G01 --trace                       # one golden case, every step shown
-python run.py --brief "Brew Theory coffee, 2 brunches in Brooklyn in Jan 2027, \$600 total, \$250 cap"
-python evals/run_evals.py                              # everything below -> REPORT.md + results/
-```
+**Like Uber connects riders and drivers, Hyperlocal connects brands and dinner hosts.**
 
-- No OpenAI key? Run `python evals/run_evals.py --judge-provider anthropic --judge-model claude-opus-5-5`. The judge is then the same vendor but a different tier, so say so in your write-up.
-- Smoke test with no keys: `python evals/run_evals.py --stub`. It uses a heuristic stand-in for the model, so the numbers mean nothing.
-- Check that the rules and golden labels agree: `python evals/oracle_check.py`. With perfect AI answers, all 20 cases score 100%.
-- Before running, check the judge model ID (`JUDGE_MODEL` in `hyperlocal/config.py`, or as an env var) against your OpenAI account.
+The app does those 3–4 hours of work in about 1 minute.
 
-## How it maps to the criteria
+## A simple example
 
-### 1. Runs end to end on real inputs
-`run.py` takes any free-text brief (plus optional evidence JSON) and runs all 5 steps: brief → structured fields →
-eligible events → fit scores → priced agreements and escalations → offer messages → shipping plan →
-payment decision. Every step is logged in the trace, tagged `AI` or `RULE`.
-*Data note:* `data/events.json` holds 30 listings modelled on real NYC supper-club formats. They are not scraped.
-Replace them with real listings (hand-pulled for the pilot) and nothing else needs to change.
+1. **Leafline** (an oat milk brand) types:
+   *"We want 3 dinners in Brooklyn in December. Budget $1,200. Max $300 per dinner."*
+2. The app finds **Maya's dinner party**: 18 guests who like healthy, plant-based food.
+3. The app offers Maya **$300** to serve Leafline oat milk, and writes her a friendly message.
+4. The app plans when to ship the oat milk to Maya.
+5. After the dinner, Maya sends photos. The app checks them:
+   - ✅ Oat milk is in the photos → **pay Maya**
+   - 🔄 Another brand is in the photos → **don't pay**
+   - 🌫️ Photos are blurry → **a person checks**
+   - ❌ Dinner was cancelled → **no payment**
 
-### 2. AI only where judgment is needed
-| Step | AI (judgment) | Rules (deterministic, in `rules.py`) |
-|---|---|---|
-| 1 Capture | Turns a messy brief into fields ("two thousand", "next Jan") | Schema check; pause if a budget, cap or date is missing or inconsistent |
-| 2 Find | Scores community fit, 0–5 with a reason | Dates, borough, freshness, opt-outs, min guests, 21+/alcohol and no-alcohol rules, dedupe, BM25 ranking |
-| 3 Negotiate | Writes the host offer | Fee formula, cap, one counter round, then escalate; budget reserve; offer guard (exact fee, can-decline line, no guest data); template fallback |
-| 4 Execute | — | Ship-by date, one order per event, proof-approval rule, host checklist |
-| 5 Verify and pay | Judges whether the evidence shows *this* brand's product | Cancellation, 14-day window, attendance below 50%, PII redaction, confidence threshold → release / review / dispute |
+## Who wins?
 
-The model never decides an amount and never releases money on its own.
+| Who | What they get |
+|---|---|
+| 🥛 Brand | Real people try the product, at a fixed price |
+| 👩‍🍳 Host | Gets paid (~$150–450) for about 1.5 hours of extra work. Never shares guest details |
+| 🏢 Us | We keep a 25% fee. By hand, each deal costs ~$140 of staff time and loses money. With the app it costs a few cents, so it makes money |
 
-### 3. One knowledge source: the event catalog, retrieved rather than put in context
-See the docstring in `hyperlocal/knowledge.py`. The catalog is the one input that grows without limit and changes
-daily. Each brief needs about 5 rows out of thousands, so the agent filters by rule, ranks with BM25, and puts
-only the top 6 into the prompt. The brief, rules and agreement are small and needed by every step, so they
-go in context.
+## How the app "thinks"
 
-### 4. Evals
-- **20 golden cases** (`data/golden.json`) with expected fields, must-pick and must-not-pick events, escalations
-  and payment decisions. They cover clean cases plus 11 edge types: missing budget, inconsistent budget,
-  messy brief, alcohol and no-alcohol rules, opted-out host, host ask above the cap, competitor product in
-  evidence, blurry evidence, late evidence, low attendance, guest PII in the evidence, host cancellation.
-- **Auto-scoring** (`evals/scoring.py`): about 12 checks per case, each tagged with a failure category.
-- **Team scores:** `results/team_scores.csv` is generated with the agent's output summarised for each case. Your team scores
-  each case 1–5 and pass y/n, then re-runs `python evals/run_evals.py --skip-tiers`.
-- **Cross-model judge on 10 cases**, with agreement against team scores (pass/fail, exact, within ±1) and
-  against the golden checks.
-- **Top 3 failure patterns**, grouped from failed-check categories and each paired with a fix.
+- **AI** does only the **thinking** jobs: understanding the request, choosing which dinner fits, writing the message, checking the photos.
+- **Fixed rules** do the **money and safety** jobs: budget, dates, prices, payment.
+  So the AI can **never** spend too much or pay by mistake.
 
-### 5. Two model tiers on the same 10 tasks
-Haiku 5.5 ($0.10 / $0.50 per M tokens) and Sonnet 5.5 ($2 / $10). The report gives mean, p50 and max latency,
-cost per 100 runs from measured token usage, and quality. The trade-off rule is: take the cheaper tier unless
-quality drops by more than 5 points. That is safe here because the costly mistakes (money, eligibility,
-payment) are made by rules, not the model.
+## What's inside the app
 
-### 6. Economic value
-A small sponsorship pays a host about $150–450. Coordinating one by hand takes about 3.5 hours of ops time
-(find, agree, ship, verify, pay), roughly $140. At a 25% take rate, a manual operator only breaks even on fees
-of about $560 or more, which is why brands only do big pop-ups. The agent cuts coordination to cents of model
-cost plus a few minutes of a person's time on exceptions, so the platform keeps a positive margin per
-sponsorship. Value goes three ways:
-- **Brands** get intimate, targeted placements at a predictable cost, with proof it happened.
-- **Hosts** get paid for about 1.5 hours of extra work, on time, with no guest data shared.
-- **The platform** earns its margin from a market that can't be served by hand.
+| Tab | What it is |
+|---|---|
+| 🚀 **Try it** | Type what a brand wants, click the button, see the result |
+| 🍽️ **Dinners** | The list of 30 dinner parties the app can choose from (sample data, made up for this demo) |
+| 📝 **Test score** | An exam for the app: 20 practice requests with correct answers. We check how many it gets right |
+| ℹ️ **About** | This explanation |
 
-`evals/economics.py` computes this from the eval run (measured model cost and measured rate of human
-touches). The take rate, ops wage and hours are labelled assumptions to replace with pilot data. The north-star
-metric is still repeat purchase by brands; this model only shows the unit economics can work.
+---
 
-## Files
-```
-run.py                  CLI: one brief end to end
-hyperlocal/agent.py     5-step workflow (AI vs RULE tagged)
-hyperlocal/rules.py     every deterministic decision
-hyperlocal/knowledge.py event catalog + BM25 retrieval (and why)
-hyperlocal/prompts.py   extraction, fit, offer, evidence, judge prompts
-hyperlocal/config.py    models, prices, thresholds
-data/events.json        knowledge source (30 NYC listings)
-data/golden.json        20 golden cases + expected outputs
-evals/run_evals.py      golden run, judge, tiers, failure patterns, economics -> REPORT.md
-evals/oracle_check.py   proves rules and labels are consistent
-```
+## For the teacher / technical details
+
+| Requirement | Where it is |
+|---|---|
+| Works end to end | `app.py` (web app) and `run.py` (command line) run all 5 steps on any request |
+| AI only where judgment is needed | AI: understand request, judge fit, write message, check photos. Rules: everything else, in `hyperlocal/rules.py` |
+| One knowledge source | The dinner list `data/events.json`. The app **searches** it (BM25) instead of giving the AI the whole list, because a real list would be huge and change every day. The brand's request and rules are small, so the AI always sees them |
+| 20 golden cases | `data/golden.json`: 20 practice requests with correct answers, including tricky ones (missing budget, whiskey brand, wrong brand in photos, host cancelled) |
+| Team scores, judge, agreement rate | `results/team_scores.csv` for the team. A second AI from another company grades 10 cases, and we measure how often it agrees with the team |
+| Top 3 failure patterns | Created automatically in the test report |
+| Two model tiers | The same 10 cases on Claude Haiku 5.5 (fast, cheap) and Claude Sonnet 5.5 (smarter): speed, cost per 100 runs, quality |
+| Economic value | Above, and calculated in `evals/economics.py` |
+
+**Run the test:** in the app, open **📝 Test score → Run the test**. Or on a computer: `python evals/run_evals.py`.
+
+**Files:** `app.py` is the screen · `hyperlocal/agent.py` is the robot brain (the 5 steps) · `hyperlocal/rules.py` has the fixed rules ·
+`data/` has the dinners and practice requests · `evals/` has the test.
