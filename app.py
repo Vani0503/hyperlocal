@@ -1,13 +1,13 @@
-"""Hyperlocal — Streamlit UI.  Run locally:  streamlit run app.py"""
+"""Hyperlocal — simple Streamlit app.  Run locally:  streamlit run app.py"""
 import json, os
 from pathlib import Path
 import pandas as pd
 import streamlit as st
 
 ROOT = Path(__file__).resolve().parent
-st.set_page_config(page_title="Hyperlocal — sponsor small dinners", page_icon="🍽️", layout="wide")
+st.set_page_config(page_title="Hyperlocal", page_icon="🍽️", layout="centered")
 
-# API key: Streamlit secrets (deployed) > env var (local) > typed in sidebar
+
 def secret(k):
     try:
         return st.secrets.get(k)
@@ -23,193 +23,216 @@ from hyperlocal import agent, config as C
 from hyperlocal.knowledge import load_events, DATA
 from hyperlocal.llm import LLM, CallLog
 
-MAX_RUNS_PER_SESSION = 15   # protects your API bill on a public link
-golden = json.loads((DATA / "golden.json").read_text())
-cases = {c["id"]: c for c in golden["cases"]}
-events = load_events()
+MAX_RUNS = 15                       # protects your API bill on a public link
+TODAY = json.loads((DATA / "golden.json").read_text())["today"]
+EVENTS = load_events()
+EV = {e["id"]: e for e in EVENTS}
+EXAMPLE = ("We're Leafline, an oat milk brand. We want 3 small dinners in Brooklyn or Manhattan this December, "
+           "with plant-based or wellness guests. Total budget $1,200, and max $300 per dinner.")
 
-# ---------------- sidebar ----------------
-with st.sidebar:
-    st.header("Settings")
-    have_key = bool(os.getenv("ANTHROPIC_API_KEY"))
-    if not have_key:
-        k = st.text_input("Anthropic API key (optional)", type="password",
-                          help="Without a key the app runs in demo mode with a simple offline stand-in for the AI.")
-        if k:
-            os.environ["ANTHROPIC_API_KEY"] = k; have_key = True
-    options = ([f"Fast — {C.FAST_MODEL}", f"Strong — {C.STRONG_MODEL}"] if have_key else []) + ["Demo mode (no AI, offline)"]
-    choice = st.radio("Model", options)
-    model = "stub" if choice.startswith("Demo") else choice.split("— ")[1]
-    today = st.date_input("Today's date (for date rules)", pd.Timestamp(golden["today"])).isoformat()
-    st.caption(f"Runs this session: {st.session_state.get('runs', 0)}/{MAX_RUNS_PER_SESSION}")
-    if model == "stub":
-        st.warning("Demo mode: AI steps use keyword heuristics. Results are illustrative only.")
+WHY_NOT = {
+    "host_opted_out": "host doesn't want sponsors", "stale_listing": "listing is old, may not happen",
+    "outside_dates": "wrong dates", "too_soon_to_ship": "too soon to ship samples", "outside_geography": "wrong area",
+    "below_min_guests": "too few guests", "alcohol_brand_needs_21plus_alcohol_event": "alcohol brands need a 21+ dinner with drinks",
+    "brand_excludes_alcohol_events": "alcohol is served (you said no alcohol)",
+}
+ASK = {
+    "missing:budget_total": "What is your **total budget**?", "missing:per_event_cap": "What is the **most you'll pay one host**?",
+    "missing:date_start": "**When** do you want the dinners?", "missing:date_end": "**When** do you want the dinners?",
+    "inconsistent:per_event_cap_exceeds_total_budget": "Your max per dinner is **bigger than your total budget**. Which number is right?",
+    "invalid:date_range": "The dates don't make sense. **When** do you want the dinners?",
+}
+PROOF = {
+    "✅ Good photos — our product is on the table": {"status": "completed", "submitted_days_after_event": 2, "attendance_ratio": 1.0,
+        "host_report": "Great night! Everyone tried the {brand} product.",
+        "photo_descriptions": ["Dinner table with {brand} product at every seat, logo clearly visible", "Guests holding {brand} samples"]},
+    "🔄 Photos show a different brand": {"status": "completed", "submitted_days_after_event": 2, "attendance_ratio": 1.0,
+        "host_report": "All good, product was on the table.",
+        "photo_descriptions": ["Table with bottles from a different brand called OtherCo", "No {brand} product visible anywhere"]},
+    "🌫️ Photos are too dark or blurry": {"status": "completed", "submitted_days_after_event": 3, "attendance_ratio": 1.0,
+        "host_report": "It was lovely, attaching pics.", "photo_descriptions": ["Very dark, blurry photo, cannot make out any products"]},
+    "❌ Host cancelled the dinner": {"status": "cancelled", "submitted_days_after_event": 0, "attendance_ratio": 0.0,
+        "host_report": "Sorry, I got sick and had to cancel.", "photo_descriptions": []},
+}
 
+# ---------------- header ----------------
 st.title("🍽️ Hyperlocal")
-st.markdown("**Brands sponsor small community dinners without the manual work.** Paste a brand brief → the agent "
-            "finds fitting NYC supper clubs, prices and negotiates within your limits, drafts host offers, plans "
-            "shipping, and decides whether to pay the host from their evidence. "
-            "`AI` = judgment steps · `RULE` = deterministic steps (all money, eligibility, privacy and payment).")
+st.markdown("#### Get your brand into small dinner parties in NYC.")
+st.markdown("You're a brand. **Write what you want** → we **pick dinner parties** and offer the host money to show your product "
+            "→ after the dinner, we **check the host's photos** and decide whether to pay.")
 
-tab_run, tab_catalog, tab_evals, tab_how = st.tabs(["▶ Run a campaign", "📚 Event catalog", "📊 Eval results", "⚙️ How it works"])
+t_try, t_dinners, t_test, t_about = st.tabs(["🚀 Try it", "🍽️ Dinners", "📝 Test score", "ℹ️ About"])
 
-# ---------------- run tab ----------------
-with tab_run:
-    labels = {"custom": "✍️ Write my own brief"} | {cid: f"{cid} · {', '.join(c['tags'])} · {c['brief'][:60]}…" for cid, c in cases.items()}
-    pick = st.selectbox("Start from an example brief or write your own", list(labels), format_func=labels.get, index=1)
-    base = cases.get(pick)
-    brief = st.text_area("Brand brief (free text, as a brand would write it)", base["brief"] if base else
-                         "We're Brew Theory coffee. 2 brunches for coffee lovers in Brooklyn or Manhattan, Jan-Feb 2027. "
-                         "$600 total, $250 max each.", height=110)
+# ---------------- TRY IT ----------------
+with t_try:
+    with st.expander("⚙️ Settings (you can ignore this)"):
+        have_key = bool(os.getenv("ANTHROPIC_API_KEY"))
+        if not have_key:
+            k = st.text_input("Anthropic API key", type="password")
+            if k:
+                os.environ["ANTHROPIC_API_KEY"] = k; have_key = True
+        opts = ([f"Smart AI ({C.STRONG_MODEL})", f"Fast AI ({C.FAST_MODEL})"] if have_key else []) + ["Demo (no AI)"]
+        choice = st.radio("Which AI?", opts)
+        model = "stub" if choice.startswith("Demo") else choice.split("(")[1].rstrip(")")
+        st.caption(f"Pretend today is {TODAY}. Runs used: {st.session_state.get('runs', 0)}/{MAX_RUNS}")
+    if model == "stub":
+        st.info("Demo mode: no real AI is connected, so results are rough.")
 
-    with st.expander("Step 5 input: host's completion evidence (optional)", expanded=bool(base and base["evidence"])):
-        ev0 = (base or {}).get("evidence") or {"status": "completed", "submitted_days_after_event": 2, "attendance_ratio": 1.0,
-               "host_report": "Great night, product was on every table.", "photo_descriptions": ["Table set with {brand} samples, logo visible"]}
-        use_ev = st.checkbox("Include evidence", value=bool(base and base["evidence"]) or pick == "custom")
-        c1, c2, c3 = st.columns(3)
-        status = c1.selectbox("Event status", ["completed", "cancelled"], index=0 if ev0["status"] == "completed" else 1)
-        days = c2.number_input("Days after event submitted", 0, 60, int(ev0["submitted_days_after_event"]))
-        att = c3.slider("Attendance vs agreed", 0.0, 1.5, float(ev0["attendance_ratio"]), 0.05)
-        report = st.text_area("Host report", ev0["host_report"])
-        photos = st.text_area("Photo descriptions (one per line; {brand} = brand name)", "\n".join(ev0["photo_descriptions"]))
-        evidence = {"status": status, "submitted_days_after_event": days, "attendance_ratio": att, "host_report": report,
-                    "photo_descriptions": [p for p in photos.splitlines() if p.strip()]} if use_ev else None
+    brief = st.text_area("**What does your brand want?**", EXAMPLE, height=110,
+                         help="Say: your brand and product, which part of NYC, which month, total budget, max per dinner.")
+    st.caption("Tip: include your product, NYC area, month, total budget and max per dinner. Edit the example or write your own.")
 
-    if st.button("Run agent", type="primary", width="stretch"):
-        if st.session_state.get("runs", 0) >= MAX_RUNS_PER_SESSION and model != "stub":
-            st.error("Run limit reached for this session. Switch to demo mode or reload later.")
+    if st.button("Find dinners for me", type="primary", width="stretch"):
+        if model != "stub" and st.session_state.get("runs", 0) >= MAX_RUNS:
+            st.error("You've used all your tries for now. Please reload later.")
         else:
             st.session_state["runs"] = st.session_state.get("runs", 0) + (model != "stub")
-            with st.spinner("Running the 5 steps…"):
+            with st.spinner("Reading your request and picking dinners… (about 20 seconds)"):
                 try:
-                    st.session_state["result"] = agent.run(brief, evidence, today=today, llm=LLM(model, log=CallLog()), events=events)
-                    st.session_state["expected"] = base["expect"] if base and brief == base["brief"] else None
+                    st.session_state["r"] = agent.run(brief, None, today=TODAY, llm=LLM(model, log=CallLog()), events=EVENTS)
+                    st.session_state["model"] = model
+                    st.session_state.pop("pay", None)
                 except Exception as e:
-                    st.session_state["result"] = None; st.error(f"Run failed: {e}")
+                    st.session_state.pop("r", None); st.error(f"Something went wrong: {e}")
 
-    r = st.session_state.get("result")
+    r = st.session_state.get("r")
     if r:
-        u = r["usage"]; tr = {t["step"]: t for t in r["trace"]}
-        m = st.columns(5)
-        m[0].metric("Status", r["status"].replace("_", " "))
-        m[1].metric("Agreements", len(r.get("agreements", [])))
-        m[2].metric("Spend reserved", f"${r.get('spend', 0):,}", f"of ${r['brief'].get('budget_total') or 0:,}", delta_color="off")
-        m[3].metric("AI cost", f"${u['cost_usd']:.4f}")
-        m[4].metric("AI latency", f"{u['latency_s']:.1f}s", f"{u['llm_calls']} calls", delta_color="off")
-
-        st.subheader("1 · Brief understood  `AI` → validated `RULE`")
         b = r["brief"]
-        st.dataframe(pd.DataFrame([{k: (", ".join(map(str, v)) if isinstance(v, list) else str(v)) for k, v in b.items()}]).T.rename(columns={0: "value"}),
-                     width="stretch")
+        st.divider()
+        st.subheader("1️⃣ What we understood")
+        if b.get("budget_total") or b.get("brand_name"):
+            areas = ", ".join(b["boroughs"]) if len(b.get("boroughs", [])) < 5 else "any area"
+            st.markdown(f"**{b.get('brand_name', '?')}** wants **{b.get('num_events', 1)} dinner(s)** in **{areas}**, "
+                        f"from **{b.get('date_start') or '?'}** to **{b.get('date_end') or '?'}**.  \n"
+                        f"Total budget **${b.get('budget_total') or '?'}**, max **${b.get('per_event_cap') or '?'}** per dinner.")
+
         if r["status"] == "needs_confirmation":
-            st.warning(f"⏸ Paused before any outreach. Issues: {', '.join(r['issues'])}. {r['next_action']}")
+            st.warning("**We need a bit more information before contacting anyone:**\n\n" +
+                       "\n".join(f"- {ASK.get(i, i)}" for i in dict.fromkeys(r["issues"])) +
+                       "\n\nAdd this to your text above and click the button again.")
         else:
-            st.subheader("2 · Events found  `RULE` filters + retrieval → `AI` fit scores")
-            elig = tr.get("2a eligibility + dedupe", {})
-            fit = tr.get("2c score community fit", {}).get("scores", {})
-            ev_by = {e["id"]: e for e in events}
-            rows = []
-            for e in events:
-                rid = e["id"]
-                why = elig.get("rejected", {}).get(rid)
-                st_ = ("dropped: duplicate listing" if rid in elig.get("duplicates_dropped", []) else
-                       f"ineligible: {', '.join(why)}" if why else
-                       f"AI fit {fit[rid][0]}/5 — {fit[rid][1]}" if rid in fit else "eligible, not in top retrieval")
-                rows.append({"id": rid, "event": e["title"], "borough": e["borough"], "date": e["date"], "guests": e["guests"], "result": st_})
-            df = pd.DataFrame(rows)
-            df["_o"] = df["result"].map(lambda s: 0 if s.startswith("AI") else 1 if s.startswith("eligible") else 2)
-            st.dataframe(df.sort_values("_o").drop(columns="_o"), hide_index=True, width="stretch", height=280)
-
-            st.subheader("3 · Agreements  `RULE` pricing & negotiation + `AI` offer drafts")
-            if r.get("agreements"):
-                st.dataframe(pd.DataFrame([{k: a[k] for k in ("event_id", "title", "date", "guests", "host_fee", "materials",
-                                                              "reserved_total", "negotiation", "fit_score")} for a in r["agreements"]]),
-                             hide_index=True, width="stretch")
-                for a in r["agreements"]:
-                    with st.expander(f"✉️ Offer to {a['host']} — {a['title']}  ({a['offer_source']}, {a['offer_attempts']} draft(s))"):
+            st.subheader("2️⃣ Dinners we picked for you")
+            ags = r.get("agreements", [])
+            if not ags:
+                st.info("We couldn't find a good dinner for this request. Try a different month, area, or a bigger budget.")
+            for a in ags:
+                e = EV[a["event_id"]]
+                with st.container(border=True):
+                    st.markdown(f"### {e['title']}")
+                    st.markdown(f"📅 {e['date']} · 📍 {e['neighborhood']}, {e['borough']} · 👥 {e['guests']} guests · host: {e['host']}")
+                    c1, c2 = st.columns(2)
+                    c1.metric("We pay the host", f"${a['host_fee']}")
+                    c2.metric("Samples + shipping", f"${a['materials']}")
+                    st.markdown(f"**Why it fits:** {a.get('fit_reason') or '—'}")
+                    st.markdown(f"**Ship samples by:** {next(p['ship_by'] for p in r['plans'] if p['event_id'] == a['event_id'])}")
+                    with st.expander("✉️ Message we wrote to the host"):
                         st.write(a["offer_message"])
-            else:
-                st.info(r.get("next_action", "No agreements made."))
-            for e in r.get("escalations", []):
-                st.warning(f"↗ Escalated to brand: {ev_by[e['id']]['title']} — {e['reason']}. The agent never pays above the cap.")
+            for x in r.get("escalations", []):
+                st.warning(f"⚠️ **{EV[x['id']]['title']}** is a good fit, but the host wants **${x['host_ask']}** and your max is "
+                           f"**${b['per_event_cap']}**. We did not go over your limit, so you decide.")
+            if ags:
+                st.success(f"💰 Total cost: **${r['spend']:,}** of your ${b['budget_total']:,} budget.")
 
-            if r.get("plans"):
-                st.subheader("4 · Execution plan  `RULE`")
-                st.dataframe(pd.DataFrame([{**p, "host_checklist": " · ".join(p["host_checklist"])} for p in r["plans"]]),
-                             hide_index=True, width="stretch")
-            if r.get("payment"):
-                p = r["payment"]
-                st.subheader("5 · Verify & pay  `RULE` checks + `AI` evidence review")
-                icon = {"release": "✅", "human_review": "👀", "dispute": "⚠️", "cancel": "✖️"}[p["decision"]]
-                st.markdown(f"### {icon} {p['decision'].replace('_', ' ').title()}" + (f" — ${p['amount']} due within {p['due_within_days']} days" if p["amount"] else ""))
-                st.write(f"Reason: {p['reason']}")
-                if p["pii_redacted"]:
-                    st.info(f"🔒 {p['pii_redacted']} guest contact detail(s) redacted before the AI saw the report.")
+            # why not the others
+            tr = {t["step"]: t for t in r["trace"]}
+            rej = tr.get("2a eligibility + dedupe", {}).get("rejected", {})
+            dup = tr.get("2a eligibility + dedupe", {}).get("duplicates_dropped", [])
+            fit = tr.get("2c score community fit", {}).get("scores", {})
+            picked = {a["event_id"] for a in ags} | {x["id"] for x in r.get("escalations", [])}
+            rows = []
+            for e in EVENTS:
+                i = e["id"]
+                if i in picked:
+                    continue
+                why = ("same dinner listed twice" if i in dup else
+                       "; ".join(WHY_NOT.get(w, w) for w in rej[i]) if i in rej else
+                       f"not a great fit ({fit[i][0]}/5): {fit[i][1]}" if i in fit and fit[i][0] < C.FIT_THRESHOLD else
+                       "good fit, but budget or dinner count already used" if i in fit else "not a close match")
+                rows.append({"Dinner": e["title"], "Why we skipped it": why})
+            with st.expander(f"See the {len(rows)} dinners we skipped, and why"):
+                st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
 
-        if st.session_state.get("expected"):
-            with st.expander("🎯 Golden expected output for this case"):
-                st.json(st.session_state["expected"])
-        with st.expander("🔍 Full trace (every step, AI vs RULE)"):
+            # after the dinner
+            if ags:
+                a0 = ags[0]; e0 = EV[a0["event_id"]]
+                st.subheader("3️⃣ After the dinner: check the proof")
+                st.markdown(f"Imagine **{e0['title']}** has happened. {e0['host']} sends photos. **What do the photos show?**")
+                pick = st.radio("Pick one:", list(PROOF), label_visibility="collapsed")
+                if st.button("Check the photos", width="stretch"):
+                    plan = next(p for p in r["plans"] if p["event_id"] == a0["event_id"])
+                    with st.spinner("Checking the photos…"):
+                        pay, _ = agent.verify_payment(b, a0, plan, PROOF[pick], LLM(st.session_state["model"], log=CallLog()))
+                    st.session_state["pay"] = (pay, e0["host"])
+                if st.session_state.get("pay"):
+                    pay, host = st.session_state["pay"]
+                    msg = {"release": ("success", f"✅ **Pay {host} ${pay['amount']}** (within {pay['due_within_days']} days)."),
+                           "human_review": ("warning", "👀 **A person should look at this** before paying."),
+                           "dispute": ("error", "❌ **Don't pay yet.** The proof doesn't show your product."),
+                           "cancel": ("info", "✖️ **Dinner cancelled. No payment**, and your money is freed up.")}[pay["decision"]]
+                    getattr(st, msg[0])(f"{msg[1]}  \nReason: {pay['reason']}")
+
+        with st.expander("🔍 For the curious: what the AI did vs. fixed rules"):
+            st.caption("AI = thinking steps (understand request, judge fit, write message, check photos). "
+                       "RULE = fixed code for money, dates, safety and payment, so the AI can never overspend.")
             for t in r["trace"]:
-                st.markdown(f"**{t['step']}** `{t['type']}`")
-                st.json({k: v for k, v in t.items() if k not in ("step", "type")}, expanded=False)
+                st.markdown(f"**{t['step']}** — `{t['type']}`")
+            u = r["usage"]
+            st.caption(f"AI calls: {u['llm_calls']} · AI time: {u['latency_s']:.1f}s · AI cost: ${u['cost_usd']:.4f}")
 
-# ---------------- catalog tab ----------------
-with tab_catalog:
-    st.markdown("**Knowledge source.** The agent *retrieves* from this catalog instead of putting it all in the prompt: "
-                "it grows without limit and changes daily, while each brief needs only ~5 rows. Rules filter it, BM25 ranks "
-                f"what's left, and only the top {C.RETRIEVAL_TOP_K} go to the AI. Listings are modelled on real NYC supper-club formats.")
-    st.dataframe(pd.DataFrame(events).assign(tags=lambda d: d.tags.map(", ".join)), hide_index=True, width="stretch")
+# ---------------- DINNERS ----------------
+with t_dinners:
+    st.markdown("These are the **dinner parties the app can choose from**.  \n"
+                "*Sample data made up for this demo. A real version would collect real dinners from hosts.*")
+    st.dataframe(pd.DataFrame([{"Dinner": e["title"], "Area": e["borough"], "Date": e["date"], "Guests": e["guests"],
+                                "What it's about": e["description"]} for e in EVENTS]), hide_index=True, width="stretch", height=600)
 
-# ---------------- evals tab ----------------
-with tab_evals:
-    with st.expander("▶ Run the full evaluation now (20 golden cases, judge on 10, two model tiers)", expanded=False):
-        if not os.getenv("ANTHROPIC_API_KEY"):
-            st.info("Add an Anthropic API key (sidebar or app secrets) to run real evals.")
-        else:
+# ---------------- TEST SCORE ----------------
+with t_test:
+    st.markdown("**This is an exam for the app.** We wrote 20 practice requests and the right answer for each "
+                "(e.g. *“this brand sells whiskey, so it must not pick a kids' dinner”*). The app tries all 20, and we count how many it gets right.")
+    rep = ROOT / "REPORT.md"
+    if rep.exists() and "STUB RUN" not in rep.read_text():
+        st.success("Latest test results are below.")
+        st.markdown(rep.read_text())
+    else:
+        st.info("The test hasn't been run yet.")
+    if os.getenv("ANTHROPIC_API_KEY"):
+        with st.expander("▶ Run the test (owner only, about 5 minutes)"):
             use_openai = bool(os.getenv("OPENAI_API_KEY"))
             jp, jm = ("openai", C.JUDGE_MODEL) if use_openai else ("anthropic", "claude-opus-5-5")
-            st.caption(f"Agent: {C.MAIN_MODEL} · tiers: {C.FAST_MODEL} vs {C.STRONG_MODEL} · judge: {jp}:{jm}"
-                       + ("" if use_openai else " (add OPENAI_API_KEY to secrets for a different-family judge)")
-                       + ". Takes ~5 minutes and roughly $1 of API usage.")
-            pw = st.text_input("Eval password", type="password", help="Set EVAL_PASSWORD in app secrets so visitors can't trigger paid runs.")
-            ok_pw = (pw == secret("EVAL_PASSWORD")) if secret("EVAL_PASSWORD") else True
-            if st.button("Run evaluation", disabled=not ok_pw):
+            pw = st.text_input("Password", type="password")
+            ok = (pw == secret("EVAL_PASSWORD")) if secret("EVAL_PASSWORD") else True
+            if st.button("Run the test", disabled=not ok):
                 import sys, types
                 sys.path.insert(0, str(ROOT / "evals"))
                 import run_evals
-                box = st.empty(); lines = []
+                box, lines = st.empty(), []
                 def log(m):
-                    lines.append(m); box.code("\n".join(lines[-15:]))
-                a = types.SimpleNamespace(stub=False, model=C.MAIN_MODEL, fast=C.FAST_MODEL, strong=C.STRONG_MODEL,
-                                          judge_provider=jp, judge_model=jm, skip_judge=False, skip_tiers=False)
-                with st.spinner("Running evaluation…"):
-                    run_evals.evaluate(a, log=log)
-                st.success("Done. Report below; download it and the team scoring sheet.")
-    for f, label in [(ROOT / "REPORT.md", "⬇ Download REPORT.md"), (ROOT / "results" / "team_scores.csv", "⬇ Download team scoring sheet")]:
-        if f.exists():
+                    lines.append(m); box.code("\n".join(lines[-12:]))
+                with st.spinner("Running 20 practice requests…"):
+                    run_evals.evaluate(types.SimpleNamespace(stub=False, model=C.MAIN_MODEL, fast=C.FAST_MODEL, strong=C.STRONG_MODEL,
+                                                             judge_provider=jp, judge_model=jm, skip_judge=False, skip_tiers=False), log=log)
+                st.rerun()
+    for f, label in [(rep, "⬇ Download full test report"), (ROOT / "results" / "team_scores.csv", "⬇ Download scoring sheet for your team")]:
+        if f.exists() and "STUB RUN" not in f.read_text():
             st.download_button(label, f.read_bytes(), file_name=f.name)
-    rep = next((p for p in [ROOT / "REPORT.md", ROOT / "REPORT_STUB_EXAMPLE.md"] if p.exists()), None)
-    if rep:
-        if rep.name.startswith("REPORT_STUB"):
-            st.warning("Showing the stub example. Run `python evals/run_evals.py` with your API keys and commit REPORT.md to show real results.")
-        st.markdown(rep.read_text())
-    else:
-        st.info("No report yet. Run `python evals/run_evals.py`.")
 
-# ---------------- how tab ----------------
-with tab_how:
+# ---------------- ABOUT ----------------
+with t_about:
     st.markdown("""
-| Step | AI (judgment only) | Rules (deterministic) |
-|---|---|---|
-| 1 Capture | Turns a messy brief into fields | Pauses if budget/cap/dates are missing or inconsistent |
-| 2 Find | Scores community fit 0–5 | Dates, borough, freshness, opt-outs, min guests, 21+/alcohol rules, dedupe, BM25 ranking |
-| 3 Negotiate | Writes the host offer | Fee formula, per-host cap, 1 counter round then escalate, budget reserve, offer guard + template fallback |
-| 4 Execute | — | Ship-by date, one order per event, proof approval, host checklist |
-| 5 Verify & pay | Judges if evidence shows *this* brand | Cancellation, 14-day window, attendance <50%, PII redaction, confidence threshold |
+**The problem.** Brands want real people to try their products. Dinner hosts work hard and earn nothing.
+Setting up one small sponsorship by hand (find the host, agree a price, ship samples, check proof, pay) takes 3–4 hours,
+so it's not worth it for a $300 deal.
 
-**Why it creates value:** coordinating one small sponsorship by hand costs ~3.5 ops hours (~$140), so at a 25% take rate
-it only pays off for host fees above ~$560 — which is why brands default to big pop-ups. The agent cuts coordination to
-cents of AI plus a few minutes of human review on exceptions, making $150–450 dinner sponsorships profitable, while hosts
-get paid fairly for ~1.5 hours of extra work and never share guest data.
+**The idea.** Like Uber connects riders and drivers, **Hyperlocal connects brands and dinner hosts.**
+The app does those 3–4 hours of work in about a minute.
+
+**Who wins?**
+- 🥛 **Brand:** real people try the product, at a fixed, known cost.
+- 👩‍🍳 **Host:** gets paid ~$150–450 for about 1.5 hours of extra work. Never shares guest details.
+- 🏢 **Us:** we keep a 25% fee. Doing this by hand costs ~$140 of staff time per deal, so it loses money.
+  With the app it costs a few cents of AI plus a few minutes of a person checking unusual cases, so it makes money.
+
+**How the app thinks.** AI does only the *thinking* (understand the request, judge which dinner fits,
+write the message, check photos). **Fixed rules** handle money, dates and payment, so the AI can never overspend or pay by mistake.
 """)
