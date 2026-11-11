@@ -78,23 +78,29 @@ def run(brief_text, evidence=None, today="2026-11-15", model=None, llm=None, eve
 
     # 5. Verify, pay, evaluate (first agreement's evidence) ----------------
     if evidence and agreements:
-        a = agreements[0]
-        decision, reason = R.payment_precheck(evidence)
-        report, n_pii = R.scrub_pii(evidence["host_report"])
-        verdict = None
-        if decision is None:
-            photos = [p.replace("{brand}", brief["brand_name"]) for p in evidence["photo_descriptions"]]
-            verdict = llm.complete_json(P.EVIDENCE_SYS,
-                f"Brand: {brief['brand_name']}\nDeliverables: {plans[0]['host_checklist']}\n"
-                f"Host report: {report.replace('{brand}', brief['brand_name'])}\nPhotos: {photos}", "evidence")
-            decision = R.payment_decision(verdict.get("verdict"), float(verdict.get("confidence", 0)))
-            reason = verdict.get("reason")
-        trace.append({"step": "5 verify evidence + payment", "type": "RULE+AI" if verdict else "RULE",
-                      "pii_redacted": n_pii, "ai_verdict": verdict, "decision": decision})
-        out["payment"] = {"event_id": a["event_id"], "decision": decision, "reason": reason,
-                          "amount": a["host_fee"] if decision == "release" else 0,
-                          "pii_redacted": n_pii, "due_within_days": C.PAYMENT_DUE_DAYS if decision == "release" else None}
+        out["payment"], t = verify_payment(brief, agreements[0], plans[0], evidence, llm)
+        trace.append(t)
     return finish(out, trace, llm)
+
+
+def verify_payment(brief, a, plan, evidence, llm):
+    """Step 5 on its own, so the UI can run it after the dinner."""
+    decision, reason = R.payment_precheck(evidence)
+    report, n_pii = R.scrub_pii(evidence["host_report"])
+    verdict = None
+    if decision is None:
+        photos = [p.replace("{brand}", brief["brand_name"]) for p in evidence["photo_descriptions"]]
+        verdict = llm.complete_json(P.EVIDENCE_SYS,
+            f"Brand: {brief['brand_name']}\nDeliverables: {plan['host_checklist']}\n"
+            f"Host report: {report.replace('{brand}', brief['brand_name'])}\nPhotos: {photos}", "evidence")
+        decision = R.payment_decision(verdict.get("verdict"), float(verdict.get("confidence", 0)))
+        reason = verdict.get("reason")
+    trace = {"step": "5 verify evidence + payment", "type": "RULE+AI" if verdict else "RULE",
+             "pii_redacted": n_pii, "ai_verdict": verdict, "decision": decision}
+    pay = {"event_id": a["event_id"], "decision": decision, "reason": reason,
+           "amount": a["host_fee"] if decision == "release" else 0,
+           "pii_redacted": n_pii, "due_within_days": C.PAYMENT_DUE_DAYS if decision == "release" else None}
+    return pay, trace
 
 
 def finish(out, trace, llm):
