@@ -43,11 +43,17 @@ class LLM:
             from openai import OpenAI
             self.client = OpenAI()
 
-    def complete(self, system, user, step, max_tokens=1200):
+    def complete(self, system, user, step, max_tokens=1200, images=None):
+        """images: optional list of (bytes, media_type) — sent to Claude's vision."""
         t = time.time()
         if self.provider == "anthropic":
+            content = user
+            if images:
+                import base64
+                content = [{"type": "image", "source": {"type": "base64", "media_type": mt,
+                            "data": base64.b64encode(b).decode()}} for b, mt in images] + [{"type": "text", "text": user}]
             kw = dict(model=self.model, max_tokens=max_tokens, system=system,
-                      messages=[{"role": "user", "content": user}])
+                      messages=[{"role": "user", "content": content}])
             try:
                 r = self.client.messages.create(temperature=0, **kw)
             except Exception as e:  # some models reject temperature; retry with defaults
@@ -64,20 +70,20 @@ class LLM:
             i, o = r.usage.prompt_tokens, r.usage.completion_tokens
         else:
             from . import stub
-            text = stub.respond(step, user)
+            text = stub.respond(step, user + (" [image attached]" if images else ""))
             i, o = len(system + user) // 4, len(text) // 4
         lat = time.time() - t
         self.log.add(step=step, model=self.model, latency_s=lat, in_tok=i, out_tok=o,
                      cost=_cost(self.model, i, o))
         return text
 
-    def complete_json(self, system, user, step, max_tokens=1200):
+    def complete_json(self, system, user, step, max_tokens=1200, images=None):
         sys_ = system + "\nRespond with a single JSON object only, no prose."
-        text = self.complete(sys_, user, step, max_tokens)
+        text = self.complete(sys_, user, step, max_tokens, images)
         try:
             return parse_json(text)
         except (ValueError, IndexError):  # one retry on malformed JSON
-            return parse_json(self.complete(sys_ + " Your last reply was not valid JSON.", user, step, max_tokens))
+            return parse_json(self.complete(sys_ + " Your last reply was not valid JSON.", user, step, max_tokens, images))
 
 
 def parse_json(text):
