@@ -36,6 +36,8 @@ Decide whether the agreed deliverables were met for THIS brand, using only the r
 - not_met: evidence shows a different brand, no product, or contradicts the agreement
 - unclear: evidence is too thin, blurry or ambiguous to decide
 Be strict about brand identity: a competitor's product is not_met.
+If real photos are attached, judge from what you can actually see: is a product clearly labelled with THIS brand's name
+visible? A generic or unbranded product, or one you cannot read, is unclear, not met.
 Return {"verdict": "met|not_met|unclear", "confidence": 0.0-1.0, "reason": "<= 25 words"}."""
 
 JUDGE_SYS = """You are an independent evaluator of an AI sponsorship agent's work on one case.
