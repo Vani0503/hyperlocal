@@ -7,7 +7,8 @@ from .knowledge import load_events, retrieve
 from .llm import LLM
 
 
-def run(brief_text, evidence=None, today="2026-11-15", model=None, llm=None, events=None):
+def run(brief_text, evidence=None, today="2026-11-15", model=None, llm=None, events=None, event_source=None):
+    """event_source: optional callable(brief, llm, today) -> events, e.g. live web search."""
     llm = llm or LLM(model or C.MAIN_MODEL)
     today_d = date.fromisoformat(today)
     events = events if events is not None else load_events()
@@ -25,6 +26,10 @@ def run(brief_text, evidence=None, today="2026-11-15", model=None, llm=None, eve
         return finish(out, trace, llm)
 
     # 2. Find events and propose -------------------------------------------
+    if event_source:
+        events = event_source(brief, llm, today)
+        out["events_used"] = events
+        trace.append({"step": "2 live web search for real events", "type": "AI", "found": len(events)})
     eligible, rejected = [], {}
     for e in events:
         why = R.eligibility(e, brief, today_d)
@@ -83,16 +88,18 @@ def run(brief_text, evidence=None, today="2026-11-15", model=None, llm=None, eve
     return finish(out, trace, llm)
 
 
-def verify_payment(brief, a, plan, evidence, llm):
+def verify_payment(brief, a, plan, evidence, llm, images=None):
     """Step 5 on its own, so the UI can run it after the dinner."""
     decision, reason = R.payment_precheck(evidence)
     report, n_pii = R.scrub_pii(evidence["host_report"])
     verdict = None
     if decision is None:
         photos = [p.replace("{brand}", brief["brand_name"]) for p in evidence["photo_descriptions"]]
+        if images:
+            photos = [f"{len(images)} real photo(s) attached above. Look at them carefully."]
         verdict = llm.complete_json(P.EVIDENCE_SYS,
             f"Brand: {brief['brand_name']}\nDeliverables: {plan['host_checklist']}\n"
-            f"Host report: {report.replace('{brand}', brief['brand_name'])}\nPhotos: {photos}", "evidence")
+            f"Host report: {report.replace('{brand}', brief['brand_name'])}\nPhotos: {photos}", "evidence", images=images)
         decision = R.payment_decision(verdict.get("verdict"), float(verdict.get("confidence", 0)))
         reason = verdict.get("reason")
     trace = {"step": "5 verify evidence + payment", "type": "RULE+AI" if verdict else "RULE",
