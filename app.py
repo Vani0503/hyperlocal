@@ -1,5 +1,6 @@
 """Hyperlocal — simple Streamlit app.  Run locally:  streamlit run app.py"""
-import json, os
+import io, json, os, urllib.parse
+from datetime import date
 from pathlib import Path
 import pandas as pd
 import streamlit as st
@@ -22,13 +23,24 @@ for _k in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
 from hyperlocal import agent, config as C
 from hyperlocal.knowledge import load_events, DATA
 from hyperlocal.llm import LLM, CallLog
+from hyperlocal.live import search_live_events
 
 MAX_RUNS = 15                       # protects your API bill on a public link
 TODAY = json.loads((DATA / "golden.json").read_text())["today"]
 EVENTS = load_events()
 EV = {e["id"]: e for e in EVENTS}
-EXAMPLE = ("We're Leafline, an oat milk brand. We want 3 small dinners in Brooklyn or Manhattan this December, "
-           "with plant-based or wellness guests. Total budget $1,200, and max $300 per dinner.")
+REAL_TODAY = date.today().isoformat()
+
+
+def shrink(file):
+    """Resize an uploaded photo to fit the AI's image limits; return (bytes, media_type)."""
+    from PIL import Image
+    im = Image.open(file).convert("RGB")
+    im.thumbnail((1568, 1568))
+    buf = io.BytesIO(); im.save(buf, "JPEG", quality=85)
+    return buf.getvalue(), "image/jpeg"
+EXAMPLE = ("We're Leafline, an oat milk brand. We want 3 small dinners in Brooklyn or Manhattan in December or January, "
+           "with plant-based, coffee or wellness guests. Total budget $1,200, and max $300 per dinner.")
 
 WHY_NOT = {
     "host_opted_out": "host doesn't want sponsors", "stale_listing": "listing is old, may not happen",
@@ -78,6 +90,14 @@ with t_try:
     if model == "stub":
         st.info("Demo mode: no real AI is connected, so results are rough.")
 
+    live_ok = model != "stub"
+    source = st.radio("**Where should we look for dinners?**",
+                      ["📋 Sample dinners (fast, made-up list)", "🌐 Real dinners from the internet (about 1 minute)"],
+                      index=1 if live_ok else 0, disabled=not live_ok,
+                      help="Real search uses AI web search to find public NYC supper clubs and food events happening soon.")
+    live = live_ok and source.startswith("🌐")
+    if live:
+        st.caption("Tip: for real search, ask for dates in the next 1–3 months.")
     brief = st.text_area("**What does your brand want?**", EXAMPLE, height=110,
                          help="Say: your brand and product, which part of NYC, which month, total budget, max per dinner.")
     st.caption("Tip: include your product, NYC area, month, total budget and max per dinner. Edit the example or write your own.")
@@ -87,9 +107,12 @@ with t_try:
             st.error("You've used all your tries for now. Please reload later.")
         else:
             st.session_state["runs"] = st.session_state.get("runs", 0) + (model != "stub")
-            with st.spinner("Reading your request and picking dinners… (about 20 seconds)"):
+            with st.spinner("Searching the internet for real dinners and picking the best… (about 1 minute)" if live else
+                            "Reading your request and picking dinners… (about 20 seconds)"):
                 try:
-                    st.session_state["r"] = agent.run(brief, None, today=TODAY, llm=LLM(model, log=CallLog()), events=EVENTS)
+                    st.session_state["r"] = agent.run(brief, None, today=REAL_TODAY if live else TODAY,
+                                                      llm=LLM(model, log=CallLog()), events=EVENTS,
+                                                      event_source=search_live_events if live else None)
                     st.session_state["model"] = model
                     st.session_state.pop("pay", None)
                 except Exception as e:
@@ -98,6 +121,9 @@ with t_try:
     r = st.session_state.get("r")
     if r:
         b = r["brief"]
+        EVX = {e["id"]: e for e in r.get("events_used") or EVENTS}
+        if "events_used" in r:
+            st.caption(f"🌐 Found {len(r['events_used'])} real events on the internet for this request.")
         st.divider()
         st.subheader("1️⃣ What we understood")
         if b.get("budget_total") or b.get("brand_name"):
@@ -116,19 +142,27 @@ with t_try:
             if not ags:
                 st.info("We couldn't find a good dinner for this request. Try a different month, area, or a bigger budget.")
             for a in ags:
-                e = EV[a["event_id"]]
+                e = EVX[a["event_id"]]
                 with st.container(border=True):
                     st.markdown(f"### {e['title']}")
+                    if e.get("url"):
+                        st.markdown(f"🔗 [See the real listing]({e['url']})  ·  *price is our suggested offer; guest count may be an estimate*")
                     st.markdown(f"📅 {e['date']} · 📍 {e['neighborhood']}, {e['borough']} · 👥 {e['guests']} guests · host: {e['host']}")
                     c1, c2 = st.columns(2)
                     c1.metric("We pay the host", f"${a['host_fee']}")
                     c2.metric("Samples + shipping", f"${a['materials']}")
                     st.markdown(f"**Why it fits:** {a.get('fit_reason') or '—'}")
                     st.markdown(f"**Ship samples by:** {next(p['ship_by'] for p in r['plans'] if p['event_id'] == a['event_id'])}")
-                    with st.expander("✉️ Message we wrote to the host"):
+                    with st.expander("✉️ Message to the host (ready to send)"):
                         st.write(a["offer_message"])
+                        to = st.text_input("Send to (email address)", key=f"to_{a['event_id']}",
+                                           placeholder="host@example.com — or your own email to test")
+                        subj = f"{b['brand_name']} would like to sponsor {e['title']}"
+                        link = f"mailto:{to}?subject={urllib.parse.quote(subj)}&body={urllib.parse.quote(a['offer_message'])}"
+                        st.link_button("📧 Open in my email app", link, disabled=not to)
+                        st.caption("We never send emails automatically. You review and press send yourself.")
             for x in r.get("escalations", []):
-                st.warning(f"⚠️ **{EV[x['id']]['title']}** is a good fit, but the host wants **${x['host_ask']}** and your max is "
+                st.warning(f"⚠️ **{EVX[x['id']]['title']}** is a good fit, but the host wants **${x['host_ask']}** and your max is "
                            f"**${b['per_event_cap']}**. We did not go over your limit, so you decide.")
             if ags:
                 st.success(f"💰 Total cost: **${r['spend']:,}** of your ${b['budget_total']:,} budget.")
@@ -140,7 +174,7 @@ with t_try:
             fit = tr.get("2c score community fit", {}).get("scores", {})
             picked = {a["event_id"] for a in ags} | {x["id"] for x in r.get("escalations", [])}
             rows = []
-            for e in EVENTS:
+            for e in EVX.values():
                 i = e["id"]
                 if i in picked:
                     continue
@@ -154,14 +188,27 @@ with t_try:
 
             # after the dinner
             if ags:
-                a0 = ags[0]; e0 = EV[a0["event_id"]]
+                a0 = ags[0]; e0 = EVX[a0["event_id"]]
                 st.subheader("3️⃣ After the dinner: check the proof")
-                st.markdown(f"Imagine **{e0['title']}** has happened. {e0['host']} sends photos. **What do the photos show?**")
-                pick = st.radio("Pick one:", list(PROOF), label_visibility="collapsed")
-                if st.button("Check the photos", width="stretch"):
+                st.markdown(f"Imagine **{e0['title']}** has happened. The host sends photos as proof.")
+                ups = st.file_uploader("**Upload a real photo** (e.g. your product on a table)", type=["png", "jpg", "jpeg", "webp"],
+                                       accept_multiple_files=True)
+                if ups:
+                    st.image(ups, width=180)
+                    note = st.text_input("Host's note (optional)", "Here are the photos from the dinner!")
+                else:
+                    st.markdown("**No photo? Pick a pretend situation instead:**")
+                    pick = st.radio("Pick one:", list(PROOF), label_visibility="collapsed")
+                if st.button("Check the proof", width="stretch"):
                     plan = next(p for p in r["plans"] if p["event_id"] == a0["event_id"])
-                    with st.spinner("Checking the photos…"):
-                        pay, _ = agent.verify_payment(b, a0, plan, PROOF[pick], LLM(st.session_state["model"], log=CallLog()))
+                    if ups:
+                        ev_in = {"status": "completed", "submitted_days_after_event": 1, "attendance_ratio": 1.0,
+                                 "host_report": note, "photo_descriptions": []}
+                        imgs = [shrink(u) for u in ups[:4]]
+                    else:
+                        ev_in, imgs = PROOF[pick], None
+                    with st.spinner("The AI is looking at the proof…"):
+                        pay, _ = agent.verify_payment(b, a0, plan, ev_in, LLM(st.session_state["model"], log=CallLog()), images=imgs)
                     st.session_state["pay"] = (pay, e0["host"])
                 if st.session_state.get("pay"):
                     pay, host = st.session_state["pay"]
@@ -181,8 +228,8 @@ with t_try:
 
 # ---------------- DINNERS ----------------
 with t_dinners:
-    st.markdown("These are the **dinner parties the app can choose from**.  \n"
-                "*Sample data made up for this demo. A real version would collect real dinners from hosts.*")
+    st.markdown("These are the **sample dinner parties** (made up) used for quick tries and for the test.  \n"
+                "Choose **🌐 Real dinners from the internet** on the Try it tab to search live NYC events instead.")
     st.dataframe(pd.DataFrame([{"Dinner": e["title"], "Area": e["borough"], "Date": e["date"], "Guests": e["guests"],
                                 "What it's about": e["description"]} for e in EVENTS]), hide_index=True, width="stretch", height=600)
 
