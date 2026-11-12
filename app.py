@@ -73,7 +73,7 @@ st.markdown("#### Get your brand into small dinner parties in NYC.")
 st.markdown("You're a brand. **Write what you want** → we **pick dinner parties** and offer the host money to show your product "
             "→ after the dinner, we **check the host's photos** and decide whether to pay.")
 
-t_try, t_dinners, t_test, t_about = st.tabs(["🚀 Try it", "🍽️ Dinners", "📝 Test score", "ℹ️ About"])
+t_try, t_dinners, t_test, t_about = st.tabs(["🚀 Try it", "🍽️ Food and Beverage Partners", "📝 Test score", "ℹ️ About"])
 
 # ---------------- TRY IT ----------------
 with t_try:
@@ -90,14 +90,8 @@ with t_try:
     if model == "stub":
         st.info("Demo mode: no real AI is connected, so results are rough.")
 
-    live_ok = model != "stub"
-    source = st.radio("**Where should we look for dinners?**",
-                      ["📋 Sample dinners (fast, made-up list)", "🌐 Real dinners from the internet (about 1 minute)"],
-                      index=1 if live_ok else 0, disabled=not live_ok,
-                      help="Real search uses AI web search to find public NYC supper clubs and food events happening soon.")
-    live = live_ok and source.startswith("🌐")
-    if live:
-        st.caption("Tip: for real search, ask for dates in the next 1–3 months.")
+    live = model != "stub"          # real web search whenever a real AI is connected
+    st.caption("🌐 We search the internet for real food & beverage events in NYC. Tip: ask for dates in the next 1–3 months.")
     brief = st.text_area("**What does your brand want?**", EXAMPLE, height=110,
                          help="Say: your brand and product, which part of NYC, which month, total budget, max per dinner.")
     st.caption("Tip: include your product, NYC area, month, total budget and max per dinner. Edit the example or write your own.")
@@ -228,10 +222,16 @@ with t_try:
 
 # ---------------- DINNERS ----------------
 with t_dinners:
-    st.markdown("These are the **sample dinner parties** (made up) used for quick tries and for the test.  \n"
-                "Choose **🌐 Real dinners from the internet** on the Try it tab to search live NYC events instead.")
-    st.dataframe(pd.DataFrame([{"Dinner": e["title"], "Area": e["borough"], "Date": e["date"], "Guests": e["guests"],
-                                "What it's about": e["description"]} for e in EVENTS]), hide_index=True, width="stretch", height=600)
+    found = (st.session_state.get("r") or {}).get("events_used")
+    if found:
+        st.markdown(f"**{len(found)} real food & beverage partners** found on the internet for your last search:")
+        st.dataframe(pd.DataFrame([{"Partner event": e["title"], "Organizer": e["host"], "Area": e["borough"], "Date": e["date"],
+                                    "Guests (est.)": e["guests"], "What it's about": e["description"], "Link": e.get("url", "")}
+                                   for e in found]), hide_index=True, width="stretch",
+                     column_config={"Link": st.column_config.LinkColumn("Link", display_text="Open")})
+    else:
+        st.info("No partners yet. Go to **🚀 Try it** and click **Find dinners for me**. "
+                "The real food & beverage events we find on the internet will show up here.")
 
 # ---------------- TEST SCORE ----------------
 with t_test:
